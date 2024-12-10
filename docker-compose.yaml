@@ -1,0 +1,32 @@
+services:
+  chat-management:
+    build: .
+    image: chat-management-service:latest
+    container_name: chat-management-service
+    restart: unless-stopped
+    ports:
+      - "5004:5004"
+    environment:
+      - NODE_ENV=production
+      - PORT=5004
+      - MONGODB_URI=mongodb://shared-mongodb:27017/chat_management
+      - REDIS_HOST=shared-redis
+      - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@shared-rabbitmq:5672/${RABBITMQ_VHOST}
+    volumes:
+      - ./logs:/usr/src/app/logs
+    networks:
+      - chat-management-network
+      - shared-infrastructure
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:5004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  chat-management-network:
+    driver: bridge
+  shared-infrastructure:
+    external: true
+    name: shared-infrastructure
