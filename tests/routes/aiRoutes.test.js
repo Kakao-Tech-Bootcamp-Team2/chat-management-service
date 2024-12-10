@@ -3,7 +3,24 @@ const express = require('express');
 const aiRoutes = require('../../src/routes/aiRoutes');
 const AIController = require('../../src/controllers/aiController');
 
-// AIController의 모든 메서드 모킹
+// OpenAI 모킹
+jest.mock('openai', () => {
+  class MockOpenAI {
+    constructor(config) {
+      this.apiKey = config.apiKey;
+      this.chat = {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { content: 'AI response' } }]
+          })
+        }
+      };
+    }
+  }
+
+  return { OpenAI: MockOpenAI };
+});
+
 jest.mock('../../src/controllers/aiController', () => ({
   prepareAIResponse: jest.fn(),
   getAISettings: jest.fn()

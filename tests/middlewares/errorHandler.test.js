@@ -5,8 +5,13 @@ describe('Error Handler Middleware', () => {
   let mockReq;
   let mockRes;
   let mockNext;
+  let originalConsoleError;
 
   beforeEach(() => {
+    // console.error 모킹
+    originalConsoleError = console.error;
+    console.error = jest.fn();
+
     mockReq = {
       originalUrl: '/test'
     };
@@ -15,6 +20,11 @@ describe('Error Handler Middleware', () => {
       json: jest.fn()
     };
     mockNext = jest.fn();
+  });
+
+  afterEach(() => {
+    // console.error 복원
+    console.error = originalConsoleError;
   });
 
   describe('errorHandler', () => {

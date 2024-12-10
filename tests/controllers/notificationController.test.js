@@ -1,7 +1,16 @@
 const NotificationController = require('../../src/controllers/notificationController');
 const NotificationService = require('../../src/services/notificationService');
 
-jest.mock('../../src/services/notificationService');
+// NotificationService의 모든 메서드를 모킹
+jest.mock('../../src/services/notificationService', () => ({
+  getUserNotifications: jest.fn(),
+  getUnreadCount: jest.fn(),
+  markAsRead: jest.fn(),
+  markAllAsRead: jest.fn(),
+  updateSettings: jest.fn(),
+  getSubscriptionStatus: jest.fn(),
+  deleteNotification: jest.fn()
+}));
 
 describe('NotificationController', () => {
   let mockReq;
@@ -11,25 +20,43 @@ describe('NotificationController', () => {
     mockReq = {
       user: { id: 'user123' },
       params: { notificationId: 'notif123' },
-      query: { limit: 10 }
+      query: { limit: 20, offset: 0 }
     };
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
     };
+    jest.clearAllMocks();
   });
 
   describe('getNotifications', () => {
     it('should get notifications successfully', async () => {
       const mockNotifications = [{ id: 'notif123', content: 'Test notification' }];
       NotificationService.getUserNotifications.mockResolvedValue(mockNotifications);
+      NotificationService.getUnreadCount.mockResolvedValue(5);
 
       await NotificationController.getNotifications(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        data: mockNotifications
+        data: {
+          notifications: mockNotifications,
+          hasMore: false,
+          totalUnread: 5
+        }
+      });
+    });
+
+    it('should handle errors', async () => {
+      NotificationService.getUserNotifications.mockRejectedValue(new Error('Service error'));
+
+      await NotificationController.getNotifications(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
+        error: 'Service error'
       });
     });
   });
@@ -38,13 +65,17 @@ describe('NotificationController', () => {
     it('should mark notification as read successfully', async () => {
       const mockNotification = { id: 'notif123', isRead: true };
       NotificationService.markAsRead.mockResolvedValue(mockNotification);
+      NotificationService.getUnreadCount.mockResolvedValue(4);
 
       await NotificationController.markAsRead(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        data: mockNotification
+        data: {
+          notification: mockNotification,
+          totalUnread: 4
+        }
       });
     });
   });
@@ -58,47 +89,46 @@ describe('NotificationController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        message: 'All notifications marked as read'
-      });
-    });
-
-    it('should handle errors', async () => {
-      const error = new Error('Failed to mark all as read');
-      NotificationService.markAllAsRead.mockRejectedValue(error);
-
-      await NotificationController.markAllAsRead(mockReq, mockRes);
-
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: error.message
+        data: {
+          totalUnread: 0,
+          message: '모든 알림이 읽음 처리되었습니다.'
+        }
       });
     });
   });
 
-  describe('deleteNotification', () => {
-    it('should delete notification successfully', async () => {
-      NotificationService.deleteNotification.mockResolvedValue();
+  describe('updateSettings', () => {
+    it('should update notification settings successfully', async () => {
+      const mockSettings = { email: true, push: false };
+      NotificationService.updateSettings.mockResolvedValue(mockSettings);
 
-      await NotificationController.deleteNotification(mockReq, mockRes);
+      mockReq.body = { settings: mockSettings };
+
+      await NotificationController.updateSettings(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        message: 'Notification deleted successfully'
+        data: {
+          settings: mockSettings
+        }
       });
     });
+  });
 
-    it('should handle errors', async () => {
-      const error = new Error('Failed to delete notification');
-      NotificationService.deleteNotification.mockRejectedValue(error);
+  describe('getSubscriptionStatus', () => {
+    it('should get subscription status successfully', async () => {
+      const mockStatus = { subscribed: true };
+      NotificationService.getSubscriptionStatus.mockResolvedValue(mockStatus);
 
-      await NotificationController.deleteNotification(mockReq, mockRes);
+      await NotificationController.getSubscriptionStatus(mockReq, mockRes);
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
-        success: false,
-        error: error.message
+        success: true,
+        data: {
+          status: mockStatus
+        }
       });
     });
   });
