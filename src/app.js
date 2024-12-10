@@ -5,8 +5,11 @@ const compression = require('compression');
 const connectDB = require('./config/database');
 const routes = require('./routes');
 const { errorHandler, notFound } = require('./middlewares/errorHandler');
-const logger = require('./utils/logger');
+const { createLogger } = require('./utils/logger');
 const config = require('./config');
+
+// Logger 초기화
+const logger = createLogger('App');
 
 // Express 앱 초기화
 const app = express();

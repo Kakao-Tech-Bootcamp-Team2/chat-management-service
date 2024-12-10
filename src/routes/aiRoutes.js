@@ -13,18 +13,46 @@ router.get('/:aiType/settings',
   AIController.getAISettings
 );
 
-// AI 응답 생성 설정
-router.post('/:aiType/prepare',
+// AI 응답 생성
+router.post('/:aiType/generate',
   validateRequest({
     params: {
       aiType: { type: 'string', enum: ['wayneAI', 'consultingAI'] }
     },
     body: {
       message: { type: 'string', required: true },
-      context: { type: 'object', required: false }
+      context: { type: 'object', required: false },
+      roomId: { type: 'string', required: false }
     }
   }),
-  AIController.prepareAIResponse
+  AIController.generateResponse
+);
+
+// AI 컨텍스트 초기화
+router.post('/:aiType/clear-context',
+  validateRequest({
+    params: {
+      aiType: { type: 'string', enum: ['wayneAI', 'consultingAI'] }
+    },
+    body: {
+      roomId: { type: 'string', required: true }
+    }
+  }),
+  AIController.clearContext
+);
+
+// AI 시스템 프롬프트 업데이트
+router.put('/:aiType/system-prompt',
+  validateRequest({
+    params: {
+      aiType: { type: 'string', enum: ['wayneAI', 'consultingAI'] }
+    },
+    body: {
+      prompt: { type: 'string', required: true },
+      roomId: { type: 'string', required: true }
+    }
+  }),
+  AIController.updateSystemPrompt
 );
 
 module.exports = router;

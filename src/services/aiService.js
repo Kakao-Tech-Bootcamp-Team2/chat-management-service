@@ -2,13 +2,47 @@
 const OpenAI = require('openai');
 const { createLogger } = require('../utils/logger');
 const logger = createLogger('AIService');
+const config = require('../config');
 
 class AIService {
   constructor() {
     this.aiTypes = ['wayneAI', 'consultingAI'];
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info('Using Mock AI Service for development');
+      this.openai = this.createMockAIClient();
+    } else {
+      if (!config.ai.openai.apiKey) {
+        throw new Error('OpenAI API key is required in production environment');
+      }
+      this.openai = new OpenAI({
+        apiKey: config.ai.openai.apiKey
+      });
+    }
+  }
+
+  createMockAIClient() {
+    return {
+      chat: {
+        completions: {
+          create: async (params) => {
+            logger.info('Mock AI Response generated');
+            return {
+              choices: [{
+                message: {
+                  content: `Mock AI Response for: ${params.messages[params.messages.length - 1].content}\n\nThis is a development environment response.`
+                }
+              }],
+              usage: {
+                prompt_tokens: 50,
+                completion_tokens: 50,
+                total_tokens: 100
+              }
+            };
+          }
+        }
+      }
+    };
   }
 
   // AI 응답 생성

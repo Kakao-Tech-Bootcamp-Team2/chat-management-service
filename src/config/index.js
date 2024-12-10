@@ -18,6 +18,11 @@ module.exports = {
     url: process.env.RABBITMQ_URL
   },
   ai: {
+    openai: {
+      apiKey: process.env.OPENAI_API_KEY,
+      maxContextSize: parseInt(process.env.AI_MAX_CONTEXT_SIZE) || 10,
+      defaultModel: process.env.AI_DEFAULT_MODEL || 'gpt-4'
+    },
     wayneAI: {
       model: process.env.WAYNE_AI_MODEL || 'gpt-3.5-turbo',
       temperature: parseFloat(process.env.WAYNE_AI_TEMPERATURE) || 0.7
