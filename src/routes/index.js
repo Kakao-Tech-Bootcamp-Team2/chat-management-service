@@ -5,9 +5,9 @@ const roomRoutes = require('./roomRoutes');
 const aiRoutes = require('./aiRoutes');
 const notificationRoutes = require('./notificationRoutes');
 
-// API 라우트 설정 (프리픽스 제거)
-router.use('/ai', aiRoutes);
+// API 라우트 설정
 router.use('/rooms', roomRoutes);
+router.use('/ai', aiRoutes);
 router.use('/notifications', notificationRoutes);
 
 // Health check endpoint

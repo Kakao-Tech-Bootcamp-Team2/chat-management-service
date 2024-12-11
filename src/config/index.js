@@ -14,7 +14,15 @@ module.exports = {
     port: parseInt(process.env.REDIS_PORT) || 6379,
     db: parseInt(process.env.REDIS_DB) || 0
   },
+  jwt: {
+    secret: process.env.JWT_SECRET,
+    accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || '1h',
+    refreshTokenExpiry: process.env.JWT_REFRESH_TOKEN_EXPIRY || '7d'
+  },
   ai: {
+    openai: {
+      apiKey: process.env.OPENAI_API_KEY
+    },
     wayneAI: {
       defaultPrompt: process.env.WAYNE_AI_DEFAULT_PROMPT,
       defaultTemperature: parseFloat(process.env.WAYNE_AI_TEMPERATURE) || 0.7

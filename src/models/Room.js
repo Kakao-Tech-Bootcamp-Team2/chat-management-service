@@ -1,56 +1,33 @@
 const mongoose = require('mongoose');
 
+const participantSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    required: true
+  },
+  role: {
+    type: String,
+    enum: ['owner', 'member'],
+    default: 'member'
+  }
+});
+
 const roomSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: true,
-    trim: true
-  },
-  description: { 
+  name: {
     type: String,
-    trim: true
+    required: true
   },
-  isPrivate: { 
-    type: Boolean, 
-    default: false 
+  isPrivate: {
+    type: Boolean,
+    default: false
   },
-  password: { 
+  password: {
     type: String,
-    select: false  // 기본적으로 조회 시 비밀번호 필드 제외
+    select: false  // 조회 시 비밀번호 필드 제외
   },
-  participants: [{
-    userId: { 
-      type: String, 
-      required: true 
-    },
-    role: { 
-      type: String, 
-      enum: ['owner', 'admin', 'member'],
-      default: 'member'
-    },
-    joinedAt: { 
-      type: Date, 
-      default: Date.now 
-    }
-  }],
-  aiSettings: {
-    enabled: Boolean,
-    aiType: String,
-    systemPrompt: String,
-    temperature: Number
-  },
-  inviteCodes: [{
-    code: String,
-    expiresAt: Date,
-    createdBy: String
-  }]
+  participants: [participantSchema]
 }, {
   timestamps: true
 });
-
-// 인덱스 설정
-roomSchema.index({ name: 1 });
-roomSchema.index({ 'participants.userId': 1 });
-roomSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Room', roomSchema);

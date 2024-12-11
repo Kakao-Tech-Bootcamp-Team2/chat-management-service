@@ -1,41 +1,73 @@
+const jwt = require('jsonwebtoken');
+const config = require('../config');
 const { createLogger } = require('../utils/logger');
+const { AuthorizationError } = require('../utils/errors');
+
 const logger = createLogger('AuthMiddleware');
 
 const auth = async (req, res, next) => {
-    try {
-      // 헤더에서 토큰 가져오기
-      const token = req.header('x-auth-token');
-      
-      if (!token) {
-        return res.status(401).json({
-          success: false,
-          message: '인증 토큰이 없습니다.'
-        });
-      }
-  
-      try {
-        // 토큰 검증
-        const decoded = jwt.verify(token, jwtSecret);
-        
-        // 사용자 정보를 요청 객체에 추가
-        req.user = {
-          id: decoded.id
-        };
-        
-        next();
-      } catch (err) {
-        return res.status(401).json({
-          success: false,
-          message: '유효하지 않은 토큰입니다.'
-        });
-      }
-    } catch (err) {
-      console.error('Auth middleware error:', err);
-      res.status(500).json({
-        success: false,
-        message: '서버 오류가 발생했습니다.'
-      });
+  try {
+    const token = req.header('x-auth-token');
+    const sessionId = req.header('x-session-id');
+    
+    logger.debug('Received headers:', { 
+      token: token ? 'exists' : 'missing',
+      sessionId: sessionId ? 'exists' : 'missing'
+    });
+    
+    if (!token || !sessionId) {
+      throw new AuthorizationError('인증 토큰과 세션 ID가 필요합니다.');
     }
-  };
-  
-  module.exports = auth;
+
+    try {
+      const decoded = jwt.verify(token, config.jwt.secret);
+      logger.debug('Decoded token payload:', {
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role
+      });
+      
+      if (!decoded.userId) {
+        throw new AuthorizationError('토큰에 userId가 없습니다.');
+      }
+
+      req.user = {
+        id: sessionId,
+        email: decoded.email,
+        role: decoded.role
+      };
+      
+      logger.debug('User info set in request:', {
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role
+      });
+      
+      next();
+    } catch (err) {
+      logger.error('Token verification failed:', {
+        error: err.message,
+        name: err.name,
+        stack: err.stack
+      });
+      throw new AuthorizationError('유효하지 않은 토큰입니다.');
+    }
+  } catch (err) {
+    logger.error('Auth middleware error:', {
+      error: err.message,
+      name: err.name,
+      stack: err.stack
+    });
+    
+    // 에러 응답 형식 통일
+    res.status(err.status || 401).json({
+      success: false,
+      error: {
+        message: err.message,
+        code: err.code || 'AUTH_ERROR'
+      }
+    });
+  }
+};
+
+module.exports = auth;

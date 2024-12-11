@@ -3,26 +3,16 @@ const { createLogger } = require('../utils/logger');
 const logger = createLogger('RoomService');
 
 class RoomService {
-  // 채팅방 생성
   async createRoom(roomData) {
     try {
       const room = new Room({
         name: roomData.name,
-        description: roomData.description,
-        isPrivate: roomData.isPrivate,
-        password: roomData.password,
-        participants: [{
-          userId: roomData.createdBy,
-          role: 'owner'
-        }],
-        aiSettings: {
-          enabled: false
-        }
+        participants: roomData.participants
       });
-      
+
       return await room.save();
     } catch (error) {
-      logger.error('Create room failed:', error);
+      logger.error('Room creation failed:', error);
       throw error;
     }
   }
@@ -119,40 +109,88 @@ class RoomService {
   }
 
   // 채팅방 참여
-  async joinRoom(roomId, userId, { inviteCode, password }) {
+  async joinRoom(roomId, sessionId, password) {
     try {
-      const room = await Room.findById(roomId);
+      logger.debug('채팅방 입장 시도:', {
+        roomId,
+        sessionId,
+        hasPassword: !!password
+      });
+
+      // 채팅방 조회 (비밀번호 필드 포함)
+      const room = await Room.findById(roomId).select('+password');
+      
       if (!room) {
-        throw new Error('Room not found');
+        const error = new Error('존재하지 않는 채팅방입니다.');
+        error.status = 404;
+        throw error;
       }
 
-      // 이미 참여 중인지 확인
-      if (room.participants.some(p => p.userId === userId)) {
-        throw new Error('Already joined');
+      logger.debug('채팅방 조회 성공:', {
+        roomId,
+        roomName: room.name,
+        isPrivate: room.isPrivate,
+        participantsCount: room.participants.length
+      });
+
+      // 이미 참여 중인지 확인 (owner는 제외)
+      const participant = room.participants.find(p => p.userId === sessionId);
+      if (participant) {
+        if (participant.role === 'owner') {
+          return room; // 방장은 바로 리턴
+        }
+        logger.debug('이미 참여 중인 사용자:', {
+          roomId,
+          sessionId,
+          role: participant.role
+        });
+        const error = new Error('이미 참여 중인 채팅방입니다.');
+        error.status = 400;
+        throw error;
       }
 
-      // 초대 코드 또는 비밀번호 확인
+      // 비밀번호 확인
       if (room.isPrivate) {
-        if (inviteCode) {
-          const validInvite = room.inviteCodes.find(i => 
-            i.code === inviteCode && i.expiresAt > new Date()
-          );
-          if (!validInvite) {
-            throw new Error('Invalid or expired invite code');
-          }
-        } else if (password !== room.password) {
-          throw new Error('Invalid password');
+        if (!password) {
+          const error = new Error('비밀번호가 필요합니다.');
+          error.status = 400;
+          throw error;
+        }
+        
+        if (password !== room.password) {
+          logger.debug('비밀번호 불일치:', {
+            roomId,
+            sessionId
+          });
+          const error = new Error('비밀번호가 일치하지 않습니다.');
+          error.status = 401;
+          throw error;
         }
       }
 
+      // 참여자 추가
       room.participants.push({
-        userId,
+        userId: sessionId,
         role: 'member'
       });
 
-      return await room.save();
+      await room.save();
+      
+      logger.info('채팅방 입장 성공:', {
+        roomId,
+        roomName: room.name,
+        sessionId,
+        participantsCount: room.participants.length
+      });
+
+      return room;
     } catch (error) {
-      logger.error('Join room failed:', error);
+      logger.error('채팅방 입장 실패:', {
+        error: error.message,
+        status: error.status,
+        roomId,
+        sessionId
+      });
       throw error;
     }
   }

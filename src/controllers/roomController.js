@@ -3,38 +3,49 @@ const { createLogger } = require('../utils/logger');
 const logger = createLogger('RoomController');
 
 class RoomController {
-  // 채팅방 생성
-  async createRoom(req, res) {
+  async createRoom(req, res, next) {
     try {
-      const { 
-        name, 
-        description, 
-        isPrivate, 
-        password,
-        participants = [], 
-        aiType 
-      } = req.body;
-      const userId = req.user.id;
+      const { name, password } = req.body;
+      const sessionId = req.header('x-session-id');
 
-      const room = await RoomService.createRoom({
+      if (!name || !sessionId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: '채팅방 이름과 세션 ID가 필요합니다.'
+          }
+        });
+      }
+
+      const roomData = {
         name,
-        description,
-        isPrivate,
+        isPrivate: !!password,
         password,
-        participants,
-        aiType,
-        createdBy: userId
-      });
+        participants: [{
+          userId: sessionId,
+          role: 'owner'
+        }]
+      };
 
-      res.status(201).json({
+      const room = await RoomService.createRoom(roomData);
+
+      return res.status(201).json({
         success: true,
         data: room
       });
+
     } catch (error) {
-      logger.error('Room creation failed:', error);
-      res.status(500).json({
+      logger.error('채팅방 생성 실패:', {
+        error: error.message,
+        sessionId: req.header('x-session-id'),
+        body: req.body
+      });
+
+      return res.status(500).json({
         success: false,
-        error: error.message || '채팅방 생성에 실패했습니다.'
+        error: {
+          message: '채팅방 생성에 실패했습니다.'
+        }
       });
     }
   }
@@ -163,7 +174,7 @@ class RoomController {
         success: true,
         data: {
           inviteCode,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24시간 후 만료
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24시 후 만료
         }
       });
     } catch (error) {
@@ -175,24 +186,40 @@ class RoomController {
     }
   }
 
-  // 채팅방 참여 (초대 코드 또는 비밀번호)
+  // 채팅방 참여
   async joinRoom(req, res) {
     try {
       const { roomId } = req.params;
-      const { inviteCode, password } = req.body;
-      const userId = req.user.id;
+      const { password } = req.body;
+      const sessionId = req.header('x-session-id');
 
-      await RoomService.joinRoom(roomId, userId, { inviteCode, password });
+      if (!sessionId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: '세션 ID가 필요합니다.'
+          }
+        });
+      }
 
-      res.status(200).json({
+      await RoomService.joinRoom(roomId, sessionId, password);
+
+      return res.status(200).json({
         success: true,
         message: '채팅방에 참여했습니다.'
       });
     } catch (error) {
-      logger.error('Join room failed:', error);
-      res.status(500).json({
+      logger.error('채팅방 입장 실패:', {
+        error: error.message,
+        sessionId: req.header('x-session-id'),
+        roomId: req.params.roomId
+      });
+
+      return res.status(error.status || 500).json({
         success: false,
-        error: error.message || '채팅방 참여에 실패했습니다.'
+        error: {
+          message: error.message || '채팅방 참여에 실패했습니다.'
+        }
       });
     }
   }
