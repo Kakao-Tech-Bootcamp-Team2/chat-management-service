@@ -53,10 +53,10 @@ jobs:
             cd ~/chat-management-service && \
             echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin && \
             git pull origin main && \
-            rm -rf ~/chat-management-service/logs && \
-            rm -rf ~/chat-management-service/uploads && \
-            mkdir -p ~/chat-management-service/logs && \
-            mkdir -p ~/chat-management-service/uploads && \
+            sudo rm -rf ~/file-service/logs && \
+            sudo rm -rf ~/file-service/uploads && \
+            sudo mkdir -p ~/file-service/logs && \
+            sudo mkdir -p ~/file-service/uploads && \
             sudo docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} && \
             sudo docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }} chat-management-service:latest && \
             sudo docker rm -f chat-management-service && \
