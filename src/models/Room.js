@@ -25,34 +25,25 @@ const roomSchema = new mongoose.Schema({
     },
     role: { 
       type: String, 
-      enum: ['admin', 'member'], 
-      default: 'member' 
+      enum: ['owner', 'admin', 'member'],
+      default: 'member'
     },
     joinedAt: { 
       type: Date, 
       default: Date.now 
     }
   }],
-  aiParticipants: [{
-    type: { 
-      type: String, 
-      enum: ['wayneAI', 'consultingAI'],
-      required: true
-    },
-    settings: {
-      type: Map,
-      of: String,
-      default: new Map()
-    }
-  }],
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
+  aiSettings: {
+    enabled: Boolean,
+    aiType: String,
+    systemPrompt: String,
+    temperature: Number
   },
-  updatedAt: { 
-    type: Date, 
-    default: Date.now 
-  }
+  inviteCodes: [{
+    code: String,
+    expiresAt: Date,
+    createdBy: String
+  }]
 }, {
   timestamps: true
 });

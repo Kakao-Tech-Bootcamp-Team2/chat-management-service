@@ -18,15 +18,14 @@ class NotificationController {
         success: true,
         data: {
           notifications,
-          hasMore: notifications.length === limit,
-          totalUnread: await NotificationService.getUnreadCount(userId)
+          hasMore: notifications.length === limit
         }
       });
     } catch (error) {
-      logger.error('Failed to get notifications:', error);
+      logger.error('Get notifications failed:', error);
       res.status(500).json({
         success: false,
-        error: error.message || '알림을 불러오는데 실패했습니다.'
+        error: error.message || '알림 목록을 불러오는데 실패했습니다.'
       });
     }
   }
@@ -34,21 +33,17 @@ class NotificationController {
   // 알림 읽음 처리
   async markAsRead(req, res) {
     try {
-      const { notificationId } = req.params;
       const userId = req.user.id;
+      const { notificationId } = req.params;
 
-      const notification = await NotificationService.markAsRead(notificationId, userId);
-      const totalUnread = await NotificationService.getUnreadCount(userId);
+      await NotificationService.markAsRead(userId, notificationId);
 
       res.status(200).json({
         success: true,
-        data: {
-          notification,
-          totalUnread
-        }
+        message: '알림이 읽음 처리되었습니다.'
       });
     } catch (error) {
-      logger.error('Failed to mark notification as read:', error);
+      logger.error('Mark notification as read failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '알림 읽음 처리에 실패했습니다.'
@@ -60,20 +55,19 @@ class NotificationController {
   async markAllAsRead(req, res) {
     try {
       const userId = req.user.id;
-      await NotificationService.markAllAsRead(userId);
-      
+      const { type } = req.query;
+
+      await NotificationService.markAllAsRead(userId, type);
+
       res.status(200).json({
         success: true,
-        data: {
-          totalUnread: 0,
-          message: '모든 알림이 읽음 처리되었습니다.'
-        }
+        message: '모든 알림이 읽음 처리되었습니다.'
       });
     } catch (error) {
-      logger.error('Failed to mark all notifications as read:', error);
+      logger.error('Mark all notifications as read failed:', error);
       res.status(500).json({
         success: false,
-        error: error.message || '알림 일괄 읽음 처리에 실패했습니다.'
+        error: error.message || '알림 읽음 처리에 실패했습니다.'
       });
     }
   }
@@ -81,24 +75,39 @@ class NotificationController {
   // 알림 삭제
   async deleteNotification(req, res) {
     try {
-      const { notificationId } = req.params;
       const userId = req.user.id;
+      const { notificationId } = req.params;
 
-      await NotificationService.deleteNotification(notificationId, userId);
-      const totalUnread = await NotificationService.getUnreadCount(userId);
+      await NotificationService.deleteNotification(userId, notificationId);
 
       res.status(200).json({
         success: true,
-        data: {
-          totalUnread,
-          message: '알림이 삭제되었습니다.'
-        }
+        message: '알림이 삭제되었습니다.'
       });
     } catch (error) {
-      logger.error('Failed to delete notification:', error);
+      logger.error('Delete notification failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '알림 삭제에 실패했습니다.'
+      });
+    }
+  }
+
+  // 알림 설정 조회
+  async getSettings(req, res) {
+    try {
+      const userId = req.user.id;
+      const settings = await NotificationService.getSettings(userId);
+
+      res.status(200).json({
+        success: true,
+        data: settings
+      });
+    } catch (error) {
+      logger.error('Get notification settings failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || '알림 설정을 불러오는데 실패했습니다.'
       });
     }
   }
@@ -107,42 +116,19 @@ class NotificationController {
   async updateSettings(req, res) {
     try {
       const userId = req.user.id;
-      const { settings } = req.body;
+      const settings = req.body;
 
       const updatedSettings = await NotificationService.updateSettings(userId, settings);
 
       res.status(200).json({
         success: true,
-        data: {
-          settings: updatedSettings
-        }
+        data: updatedSettings
       });
     } catch (error) {
-      logger.error('Failed to update notification settings:', error);
+      logger.error('Update notification settings failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '알림 설정 업데이트에 실패했습니다.'
-      });
-    }
-  }
-
-  // 알림 구독 상태 확인
-  async getSubscriptionStatus(req, res) {
-    try {
-      const userId = req.user.id;
-      const status = await NotificationService.getSubscriptionStatus(userId);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          status
-        }
-      });
-    } catch (error) {
-      logger.error('Failed to get subscription status:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || '구독 상태 확인에 실패했습니다.'
       });
     }
   }

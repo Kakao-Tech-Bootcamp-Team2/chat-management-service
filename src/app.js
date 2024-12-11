@@ -2,67 +2,80 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const connectDB = require('./config/database');
-const routes = require('./routes');
-const { errorHandler, notFound } = require('./middlewares/errorHandler');
 const { createLogger } = require('./utils/logger');
-const config = require('./config');
+const { errorHandler, notFound } = require('./middlewares/errorHandler');
+const connectDB = require('./config/database');
 
-// Logger 초기화
 const logger = createLogger('App');
 
 // Express 앱 초기화
 const app = express();
 
-// 데이터베이스 연결
-connectDB();
-
 // 미들웨어 설정
-app.use(helmet());  // 보안 헤더 설정
-app.use(cors());    // CORS 설정
-app.use(compression());  // 응답 압축
-app.use(express.json()); // JSON 파싱
+app.use(helmet());
+app.use(cors());
+app.use(compression());
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 로깅 미들웨어
+// 요청 로깅
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.originalUrl}`);
   next();
 });
 
-// 기본 경로 설정
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Welcome to Chat Management Service',
-    version: '1.0.0'
+// 헬스 체크 (root level)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    success: true,
+    data: {
+      service: 'chat-management-service',
+      status: 'ok',
+      timestamp: new Date().toISOString()
+    }
   });
 });
 
-// API 라우트 설정
-app.use('/api', routes);
+// 라우트 설정
+app.use('/api/v1', require('./routes'));
 
-// 404 에러 처리
+// 404 처리
 app.use(notFound);
 
-// 글로벌 에러 핸들러
+// 에러 처리
 app.use(errorHandler);
 
 // 서버 시작
-const PORT = config.app.port;
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
-  logger.info(`Environment: ${config.app.env}`);
-});
+const PORT = process.env.PORT || 3000;
 
-// 예기치 않은 에러 처리
+const startServer = async () => {
+  try {
+    // MongoDB 연결
+    await connectDB();
+    logger.info('MongoDB Connected');
+
+    // 서버 시작
+    app.listen(PORT, () => {
+      logger.info(`Server is running on port ${PORT}`);
+      logger.info(`Environment: ${process.env.NODE_ENV}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// 프로세스 에러 처리
 process.on('unhandledRejection', (err) => {
   logger.error('Unhandled Rejection:', err);
+  process.exit(1);
 });
 
 process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception:', err);
-  // 심각한 에러의 경우 프로세스 종료
   process.exit(1);
 });
+
+startServer();
 
 module.exports = app;

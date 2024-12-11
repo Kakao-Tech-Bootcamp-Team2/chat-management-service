@@ -1,4 +1,5 @@
 const { USER_ROLES } = require('../constants');
+const { ValidationError } = require('../errors');
 
 class RoomValidator {
   static validateRoomData(data) {
@@ -19,7 +20,7 @@ class RoomValidator {
     }
 
     // 비공개방 설정 검증
-    if (data.isPrivate && typeof data.isPrivate !== 'boolean') {
+    if (data.isPrivate !== undefined && typeof data.isPrivate !== 'boolean') {
       errors.push('isPrivate must be a boolean value');
     }
 
@@ -28,7 +29,11 @@ class RoomValidator {
       errors.push('Password is required for private rooms');
     }
 
-    return errors;
+    if (errors.length > 0) {
+      throw new ValidationError(errors.join(', '));
+    }
+
+    return true;
   }
 
   static validateParticipant(userId, role) {
@@ -42,7 +47,11 @@ class RoomValidator {
       errors.push(`Role must be one of: ${Object.values(USER_ROLES).join(', ')}`);
     }
 
-    return errors;
+    if (errors.length > 0) {
+      throw new ValidationError(errors.join(', '));
+    }
+
+    return true;
   }
 }
 

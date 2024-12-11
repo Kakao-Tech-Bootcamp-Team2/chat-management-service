@@ -43,7 +43,7 @@ const validateRequest = (schema) => {
           errors.push(`${field} must be one of [${rules.enum.join(', ')}] in ${location}`);
         }
   
-        // Min/Max 체크 (문자열 길이 또는 숫자 범위)
+        // Min/Max 체크
         if (rules.min !== undefined) {
           if ((typeof value === 'string' && value.length < rules.min) ||
               (typeof value === 'number' && value < rules.min)) {

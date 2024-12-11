@@ -25,85 +25,23 @@ class AIController {
     }
   }
 
-  // AI 응답 생성 및 스트리밍 처리
+  // AI 응답 생성
   async generateResponse(req, res) {
     try {
       const { aiType } = req.params;
       const { message, context, roomId } = req.body;
-      const userId = req.user.id;
-
-      logger.info('Generating AI response:', {
-        aiType,
-        roomId,
-        userId,
-        messageLength: message.length
-      });
-
-      // 스트리밍 응답 설정
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-
-      // 스트리밍 시작 이벤트
-      res.write('event: start\n');
-      res.write(`data: ${JSON.stringify({ 
-        aiType, 
-        roomId,
-        timestamp: new Date().toISOString()
-      })}\n\n`);
-
-      // AI 응답 생성 및 스트리밍
-      const stream = await AIService.generateStreamResponse(aiType, message, context);
       
-      stream.on('data', (chunk) => {
-        res.write(`event: message\n`);
-        res.write(`data: ${chunk}\n\n`);
+      const response = await AIService.generateResponse(aiType, message, context);
+      
+      res.status(200).json({
+        success: true,
+        data: response
       });
-
-      stream.on('end', () => {
-        res.write('event: end\n');
-        res.write(`data: ${JSON.stringify({
-          timestamp: new Date().toISOString()
-        })}\n\n`);
-        res.end();
-      });
-
-      stream.on('error', (error) => {
-        logger.error('AI stream error:', error);
-        res.write('event: error\n');
-        res.write(`data: ${JSON.stringify({ 
-          error: error.message,
-          timestamp: new Date().toISOString()
-        })}\n\n`);
-        res.end();
-      });
-
     } catch (error) {
       logger.error('AI response generation failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'AI 응답 생성에 실패했습니다.'
-      });
-    }
-  }
-
-  // AI 응답 중단
-  async stopGeneration(req, res) {
-    try {
-      const { aiType } = req.params;
-      const { roomId } = req.body;
-      
-      await AIService.stopGeneration(aiType, roomId);
-      
-      res.status(200).json({
-        success: true,
-        message: 'AI 응답 생성이 중단되었습니다.'
-      });
-    } catch (error) {
-      logger.error('AI generation stop failed:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'AI 응답 중단에 실패했습니다.'
       });
     }
   }
@@ -118,10 +56,10 @@ class AIController {
       
       res.status(200).json({
         success: true,
-        message: 'AI 컨텍스트가 초기화되었습니다.'
+        message: 'Context cleared successfully'
       });
     } catch (error) {
-      logger.error('AI context clear failed:', error);
+      logger.error('Context clear failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || 'AI 컨텍스트 초기화에 실패했습니다.'

@@ -2,13 +2,13 @@ module.exports = {
     // 알림 타입
     NOTIFICATION_TYPES: {
       MENTION: 'mention',
-      ROOM_INVITE: 'roomInvite',
-      NEW_MESSAGE: 'newMessage',
+      INVITE: 'invite',
       SYSTEM: 'system'
     },
   
     // 사용자 역할
     USER_ROLES: {
+      OWNER: 'owner',
       ADMIN: 'admin',
       MEMBER: 'member'
     },
@@ -28,15 +28,15 @@ module.exports = {
   
     // 캐시 키 접두사
     CACHE_KEYS: {
-      ROOM: 'room:',
-      USER: 'user:',
-      NOTIFICATION: 'notification:'
+      AI_CONTEXT: 'ai:context:',
+      ROOM_SETTINGS: 'room:settings:',
+      USER_SESSION: 'user:session:'
     },
   
     // 캐시 만료 시간 (초)
     CACHE_TTL: {
-      ROOM: 3600,        // 1시간
-      USER: 1800,        // 30분
-      NOTIFICATION: 300  // 5분
+      AI_CONTEXT: 3600,     // 1시간
+      ROOM_SETTINGS: 1800,  // 30분
+      USER_SESSION: 86400   // 24시간
     }
   };

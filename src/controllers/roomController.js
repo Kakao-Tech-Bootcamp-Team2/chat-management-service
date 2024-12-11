@@ -28,13 +28,10 @@ class RoomController {
 
       res.status(201).json({
         success: true,
-        data: {
-          room,
-          joinToken: room.isPrivate ? await RoomService.generateJoinToken(room._id) : null
-        }
+        data: room
       });
     } catch (error) {
-      logger.error('Failed to create room:', error);
+      logger.error('Room creation failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '채팅방 생성에 실패했습니다.'
@@ -45,31 +42,21 @@ class RoomController {
   // 채팅방 목록 조회
   async getRooms(req, res) {
     try {
+      const { page = 1, limit = 20, search } = req.query;
       const userId = req.user.id;
-      const { 
-        limit = 20, 
-        offset = 0, 
-        search,
-        filter = 'all',
-        sortBy = 'lastActivity',
-        sortOrder = 'desc'
-      } = req.query;
 
-      const { rooms, total } = await RoomService.getRoomsByUserId(
-        userId,
-        { limit, offset, search, filter, sortBy, sortOrder }
-      );
+      const rooms = await RoomService.getRooms(userId, {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        search
+      });
 
       res.status(200).json({
         success: true,
-        data: {
-          rooms,
-          total,
-          hasMore: rooms.length === limit
-        }
+        data: rooms
       });
     } catch (error) {
-      logger.error('Failed to get rooms:', error);
+      logger.error('Get rooms failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '채팅방 목록을 불러오는데 실패했습니다.'
@@ -87,14 +74,10 @@ class RoomController {
 
       res.status(200).json({
         success: true,
-        data: {
-          room,
-          isParticipant: room.participants.includes(userId),
-          unreadCount: await RoomService.getUnreadCount(roomId, userId)
-        }
+        data: room
       });
     } catch (error) {
-      logger.error('Failed to get room:', error);
+      logger.error('Get room failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '채팅방 정보를 불러오는데 실패했습니다.'
@@ -106,20 +89,17 @@ class RoomController {
   async updateRoom(req, res) {
     try {
       const { roomId } = req.params;
+      const updates = req.body;
       const userId = req.user.id;
-      const updateData = req.body;
 
-      const room = await RoomService.updateRoom(roomId, updateData, userId);
+      const updatedRoom = await RoomService.updateRoom(roomId, updates, userId);
 
       res.status(200).json({
         success: true,
-        data: {
-          room,
-          message: '채팅방 정보가 업데이트되었습니다.'
-        }
+        data: updatedRoom
       });
     } catch (error) {
-      logger.error('Failed to update room:', error);
+      logger.error('Room update failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '채팅방 정보 수정에 실패했습니다.'
@@ -131,23 +111,17 @@ class RoomController {
   async addParticipant(req, res) {
     try {
       const { roomId } = req.params;
-      const { userId, token } = req.body;
+      const { userId } = req.body;
       const requesterId = req.user.id;
 
-      const room = await RoomService.addParticipant(roomId, userId, {
-        requesterId,
-        joinToken: token
-      });
+      await RoomService.addParticipant(roomId, userId, requesterId);
 
       res.status(200).json({
         success: true,
-        data: {
-          room,
-          message: '참여자가 추가되었습니다.'
-        }
+        message: '참여자가 추가되었습니다.'
       });
     } catch (error) {
-      logger.error('Failed to add participant:', error);
+      logger.error('Add participant failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '참여자 추가에 실패했습니다.'
@@ -162,17 +136,14 @@ class RoomController {
       const { userId } = req.body;
       const requesterId = req.user.id;
 
-      const room = await RoomService.removeParticipant(roomId, userId, requesterId);
+      await RoomService.removeParticipant(roomId, userId, requesterId);
 
       res.status(200).json({
         success: true,
-        data: {
-          room,
-          message: '참여자가 제거되었습니다.'
-        }
+        message: '참여자가 제거되었습니다.'
       });
     } catch (error) {
-      logger.error('Failed to remove participant:', error);
+      logger.error('Remove participant failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '참여자 제거에 실패했습니다.'
@@ -180,30 +151,7 @@ class RoomController {
     }
   }
 
-  // 채팅방 나가기
-  async leaveRoom(req, res) {
-    try {
-      const { roomId } = req.params;
-      const userId = req.user.id;
-
-      await RoomService.leaveRoom(roomId, userId);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          message: '채팅방을 나갔습니다.'
-        }
-      });
-    } catch (error) {
-      logger.error('Failed to leave room:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || '채팅방 나가기에 실패했습니다.'
-      });
-    }
-  }
-
-  // 채팅방 초대 코드 생성
+  // 채대 코드 생성
   async generateInviteCode(req, res) {
     try {
       const { roomId } = req.params;
@@ -219,10 +167,53 @@ class RoomController {
         }
       });
     } catch (error) {
-      logger.error('Failed to generate invite code:', error);
+      logger.error('Generate invite code failed:', error);
       res.status(500).json({
         success: false,
         error: error.message || '초대 코드 생성에 실패했습니다.'
+      });
+    }
+  }
+
+  // 채팅방 참여 (초대 코드 또는 비밀번호)
+  async joinRoom(req, res) {
+    try {
+      const { roomId } = req.params;
+      const { inviteCode, password } = req.body;
+      const userId = req.user.id;
+
+      await RoomService.joinRoom(roomId, userId, { inviteCode, password });
+
+      res.status(200).json({
+        success: true,
+        message: '채팅방에 참여했습니다.'
+      });
+    } catch (error) {
+      logger.error('Join room failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || '채팅방 참여에 실패했습니다.'
+      });
+    }
+  }
+
+  // 채팅방 AI 설정 조회
+  async getAISettings(req, res) {
+    try {
+      const { roomId } = req.params;
+      const userId = req.user.id;
+
+      const settings = await RoomService.getAISettings(roomId, userId);
+
+      res.status(200).json({
+        success: true,
+        data: settings
+      });
+    } catch (error) {
+      logger.error('Get AI settings failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'AI 설정을 불러오는데 실패했습니다.'
       });
     }
   }

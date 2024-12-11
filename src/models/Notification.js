@@ -9,30 +9,31 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['mention', 'roomInvite', 'newMessage', 'system']
+    enum: ['mention', 'invite', 'system']
   },
-  roomId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Room',
-    required: false  // 시스템 알림의 경우 방 ID가 없을 수 있음
+  title: {
+    type: String,
+    required: true
   },
   content: {
     type: String,
     required: true
   },
-  metadata: {
-    type: Map,
-    of: mongoose.Schema.Types.Mixed,
-    default: new Map()
+  roomId: {
+    type: String,
+    required: false
+  },
+  messageId: {
+    type: String,
+    required: false
   },
   isRead: {
     type: Boolean,
     default: false
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    expires: 30 * 24 * 60 * 60  // 30일 후 자동 삭제
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   }
 }, {
   timestamps: true
