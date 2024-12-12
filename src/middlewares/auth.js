@@ -7,6 +7,7 @@ const logger = createLogger('AuthMiddleware');
 
 const auth = async (req, res, next) => {
   try {
+    logger.debug(`Request Headers: ${JSON.stringify(req.headers)}`);
     const token = req.header('x-auth-token');
     const sessionId = req.header('x-session-id');
     
@@ -20,8 +21,8 @@ const auth = async (req, res, next) => {
     }
 
     try {
-      logger.debug('x-auth-token:', token);
-      logger.debug('config.jwt.secret:', config.jwt.secret);
+      logger.debug(`x-auth-token: ${token}`);
+      logger.debug(`config.jwt.secret:${config.jwt.secret}`);
       const decoded = jwt.verify(token, config.jwt.secret);
       logger.debug('Decoded token payload:', {
         userId: decoded.userId,
