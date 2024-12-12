@@ -144,11 +144,13 @@ class RoomService {
   }
 
   // 채팅방 참여
-  async joinRoom(roomId, sessionId, password) {
+  async joinRoom(roomId, sessionId, username, email, password) {
     try {
       logger.debug("채팅방 입장 시도:", {
         roomId,
         sessionId,
+        username,
+        email,
         hasPassword: !!password,
       });
 
@@ -161,22 +163,17 @@ class RoomService {
         throw error;
       }
 
-      logger.debug("채팅방 조회 성공:", {
-        roomId,
-        roomName: room.name,
-        isPrivate: room.isPrivate,
-        participantsCount: room.participants.length,
-      });
-
       // 이미 참여 중인지 확인
       const participant = room.participants.find((p) => p.userId === sessionId);
       if (participant) {
         logger.debug("이미 참여 중인 사용자:", {
           roomId,
           sessionId,
+          username,
+          email,
           role: participant.role,
         });
-        return room; // 이미 참여 중이면 바로 room 반환
+        return room;
       }
 
       // 비밀번호 확인 (새로운 참여자인 경우에만)
@@ -201,6 +198,8 @@ class RoomService {
       // 새로운 참여자 추가
       room.participants.push({
         userId: sessionId,
+        name: username,
+        email: email,
         role: "member",
       });
 
@@ -210,6 +209,8 @@ class RoomService {
         roomId,
         roomName: room.name,
         sessionId,
+        username,
+        email,
         participantsCount: room.participants.length,
       });
 
@@ -220,6 +221,8 @@ class RoomService {
         status: error.status,
         roomId,
         sessionId,
+        username,
+        email,
       });
       throw error;
     }

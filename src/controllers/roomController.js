@@ -5,10 +5,11 @@ const logger = createLogger("RoomController");
 class RoomController {
   async createRoom(req, res, next) {
     try {
-      const { name, password } = req.body;
+      const { name: roomName, password } = req.body;
       const sessionId = req.header("x-session-id");
+      const { email, name: username } = req.user;
 
-      if (!name || !sessionId) {
+      if (!roomName || !sessionId) {
         return res.status(400).json({
           success: false,
           error: {
@@ -18,12 +19,14 @@ class RoomController {
       }
 
       const roomData = {
-        name,
+        name: roomName,
         isPrivate: !!password,
         password,
         participants: [
           {
+            name: username,
             userId: sessionId,
+            email: email,
             role: "owner",
           },
         ],
@@ -39,6 +42,7 @@ class RoomController {
       logger.error("채팅방 생성 실패:", {
         error: error.message,
         sessionId: req.header("x-session-id"),
+        email: req.user.email,
         body: req.body,
       });
 
@@ -218,6 +222,7 @@ class RoomController {
       const { roomId } = req.params;
       const { password } = req.body;
       const sessionId = req.header("x-session-id");
+      const { email, name: username } = req.user;
 
       if (!sessionId) {
         return res.status(400).json({
@@ -228,7 +233,7 @@ class RoomController {
         });
       }
 
-      await RoomService.joinRoom(roomId, sessionId, password);
+      await RoomService.joinRoom(roomId, sessionId, username, email, password);
 
       return res.status(200).json({
         success: true,
@@ -238,6 +243,7 @@ class RoomController {
       logger.error("채팅방 입장 실패:", {
         error: error.message,
         sessionId: req.header("x-session-id"),
+        email: req.user.email,
         roomId: req.params.roomId,
       });
 
