@@ -21,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 // 요청 로깅
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.originalUrl}`);
+  logger.debug(`Request Headers: ${JSON.stringify(req.headers)}`); // 헤더 정보 로그 추가
   next();
 });
 
